@@ -13,32 +13,96 @@ use PHPUnit\Framework\TestCase;
 class NormalizeTest extends TestCase
 {
     /**
-     * @var string;
+     * @var Normalizer;
      */
-    protected $responseData;
+    protected $normalizer;
 
     /**
      * @inheritdoc
      */
     public function setUp()
     {
-        $this->responseData = file_get_contents(__DIR__ . '/jsonapi.json');
+        $responseData = file_get_contents(__DIR__ . '/examples/single.json');
+        $this->normalizer = new Normalizer($responseData);
     }
 
     /**
-     * testProcessResponse.
+     * testNormalizerInstance.
      */
-    public function testProcessResponse()
+    public function testNormalizerInstance()
     {
-        $normalized = new Normalizer($this->responseData);
-        $built = $normalized->build(1);
+        $this->assertInstanceOf('JacobFennik\JsonApiNormalizer\Normalizer', $this->normalizer);
+    }
 
-        print_r($built->author);
+    /**
+     * testBuild.
+     */
+    public function testBuild()
+    {
+        $built = $this->normalizer->build();
 
-        if ($normalized) {
-            return true;
-        }
+        $this->assertInstanceOf('Illuminate\Support\Collection', $built);
+    }
 
-        return false;
+    /**
+     * testRelationCollection.
+     */
+    public function testRelationCollection()
+    {
+        $built = $this->normalizer->build(1);
+
+        $this->assertInstanceOf('Illuminate\Support\Collection', $built->comments);
+    }
+
+    /**
+     * testMainObject.
+     */
+    public function testMainObject()
+    {
+        $built = $this->normalizer->build(1);
+
+        $this->assertSame('JSON:API paints my bikeshed!', $built->title);
+    }
+
+    /**
+     * testSingleRelationObject.
+     */
+    public function testSingleRelationObject()
+    {
+        $built = $this->normalizer->build(1);
+
+        $this->assertSame('Dan', $built->author->firstName);
+    }
+
+    /**
+     * testCollectionRelationObject
+     */
+    public function testCollectionRelationObject()
+    {
+        $built = $this->normalizer->build(1);
+
+        $this->assertSame('First!', $built->comments->first()->body);
+    }
+
+    /**
+     * testObjectTypeInclusion
+     */
+    public function testObjectTypeInclusion()
+    {
+        $this->normalizer->includeType(true);
+        $built = $this->normalizer->build(1);
+
+        $this->assertTrue(property_exists($built, 'type'));
+    }
+
+    /**
+     * testObjectTypeExclusion
+     */
+    public function testObjectTypeExclusion()
+    {
+        $this->normalizer->includeType(false);
+        $built = $this->normalizer->build(1);
+
+        $this->assertFalse(property_exists($built, 'type'));
     }
 }
