@@ -16,17 +16,17 @@ class Normalizer {
     /**
      * @var Collection
      */
-    protected $dataObjects;
-
-    /**
-     * @var Collection
-     */
-    protected $includedObjects;
-
-    /**
-     * @var Collection
-     */
     protected $original;
+
+    /**
+     * @var Collection
+     */
+    protected $data;
+
+    /**
+     * @var Collection
+     */
+    protected $included;
 
     /**
      * @var bool
@@ -67,9 +67,9 @@ class Normalizer {
             $inputData = json_decode($inputData, true);
         }
 
-        $this->recordOriginal($inputData);
-        $this->processData();
-        $this->processIncluded();
+        $this->storeOriginal($inputData);
+        $this->storeData($this->original->get('data'));
+        $this->storeIncluded($this->original->get('included'));
     }
 
     /**
@@ -89,10 +89,10 @@ class Normalizer {
         $result = new Collection();
 
         if ($dataId) {
-            $object = $this->dataObjects->where('id', $dataId)->first();
+            $object = $this->data->where('id', $dataId)->first();
             $result = $this->buildObject($object);
         } else {
-            $this->dataObjects->each(function ($object) use ($result) {
+            $this->data->each(function ($object) use ($result) {
                 $result->put($object->id, $this->buildObject($object));
             });
         }
@@ -110,21 +110,43 @@ class Normalizer {
         $this->includeType = $includeType;
     }
 
-    private function processData()
+    /**
+     * Store original response.
+     *
+     * @param array $responseArray
+     */
+    private function storeOriginal(array $responseArray)
     {
-        $this->dataObjects = new Collection($this->original->get('data'));
+        $this->original = new Collection($responseArray);
     }
 
-    private function processIncluded()
+    /**
+     * Store response data.
+     *
+     * @param array $data
+     */
+    private function storeData(array $data)
     {
-        $this->includedObjects = new Collection($this->original->get('included'));
+        $this->data = new Collection($data);
     }
 
-    private function recordOriginal($inputData)
+    /**
+     * Store response includes.
+     *
+     * @param array $included
+     */
+    private function storeIncluded(array $included)
     {
-        $this->original = new Collection($inputData);
+        $this->included = new Collection($included);
     }
 
+    /**
+     * Compile object with relationships.
+     *
+     * @param $object
+     *
+     * @return object
+     */
     private function buildObject($object)
     {
         if (is_array($object)) {
@@ -151,29 +173,20 @@ class Normalizer {
         return $object;
     }
 
+    /**
+     * Get relationships for object and build recursively.
+     *
+     * @param $object
+     *
+     * @return array
+     */
     private function getRelationships($object)
     {
         $relations = [];
 
         if ($object->relationships) {
             foreach ($object->relationships as $key => $relation) {
-                $relationObject = null;
-                $data = $relation['data'];
-
-                if (array_key_exists('type', $data)) {
-                    $object = $this->findInclude($data['type'], $data['id']);
-                    if (!empty($object)) {
-                        $relationObject = $this->buildObject($object);
-                    }
-                } else {
-                    $relationObject = new Collection();
-                    foreach ($data as $multiData) {
-                        $object = $this->findInclude($multiData['type'], $multiData['id']);
-                        if (!empty($object)) {
-                            $relationObject->put($object->id, $this->buildObject($object));
-                        }
-                    }
-                }
+                $relationObject = $this->buildRelationship($relation);
 
                 if ($relationObject) {
                     $relations[$key] = $relationObject;
@@ -184,14 +197,60 @@ class Normalizer {
         return $relations;
     }
 
+    /**
+     * Build relationship and build its objects.
+     *
+     * @param array $relation
+     *
+     * @return Collection|object|null
+     */
+    private function buildRelationship(array $relation)
+    {
+        $relationObject = null;
+        $relationData = $relation['data'];
+
+        if (array_key_exists('type', $relationData)) {
+            $object = $this->findInclude($relationData['type'], $relationData['id']);
+            if (!empty($object)) {
+                $relationObject = $this->buildObject($object);
+            }
+        } else {
+            $relationObject = new Collection();
+
+            foreach ($relationData as $multiData) {
+                $object = $this->findInclude($multiData['type'], $multiData['id']);
+                if (!empty($object)) {
+                    $relationObject->put($object->id, $this->buildObject($object));
+                }
+            }
+        }
+
+        return $relationObject;
+    }
+
+    /**
+     * Find object by type and id.
+     *
+     * @param $type
+     * @param $id
+     *
+     * @return mixed
+     */
     private function findInclude($type, $id)
     {
-        return $this->includedObjects
+        return $this->included
             ->where('type', $type)
             ->where('id', $id)
             ->first();
     }
 
+    /**
+     * Test if string is valid json format.
+     *
+     * @param $string
+     *
+     * @return bool
+     */
     private function isValidJson($string)
     {
         json_decode($string);
