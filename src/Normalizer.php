@@ -3,6 +3,8 @@
 namespace JacobFennik\JsonApiNormalizer;
 
 use Illuminate\Support\Collection;
+use JacobFennik\JsonApiNormalizer\Exceptions\InvalidJsonStringException;
+use JacobFennik\JsonApiNormalizer\Exceptions\NoInputDataException;
 
 /**
  * Class Normalizer
@@ -36,6 +38,8 @@ class Normalizer {
      *
      * @param null $inputData
      * @param bool $includeType
+     *
+     * @throws InvalidJsonStringException
      */
     public function __construct($inputData = null, $includeType = false)
     {
@@ -50,10 +54,16 @@ class Normalizer {
      * Process input data.
      *
      * @param $inputData
+     *
+     * @throws InvalidJsonStringException
      */
     public function process($inputData)
     {
         if (is_string($inputData)) {
+            if (!$this->isValidJson($inputData)) {
+                throw new InvalidJsonStringException('Input string is not valid JSON');
+            }
+
             $inputData = json_decode($inputData, true);
         }
 
@@ -68,9 +78,14 @@ class Normalizer {
      * @param null $dataId
      *
      * @return array|object
+     * @throws NoInputDataException
      */
     public function build($dataId = null)
     {
+        if (!$this->original instanceof Collection) {
+            throw new NoInputDataException('No input data supplied to normalizer');
+        }
+
         $result = new Collection();
 
         if ($dataId) {
@@ -83,6 +98,16 @@ class Normalizer {
         }
 
         return $result;
+    }
+
+    /**
+     * Set include type option.
+     *
+     * @param $includeType
+     */
+    public function includeType($includeType)
+    {
+        $this->includeType = $includeType;
     }
 
     private function processData()
@@ -136,21 +161,16 @@ class Normalizer {
                 $data = $relation['data'];
 
                 if (array_key_exists('type', $data)) {
-                    $object = $this->includedObjects
-                        ->where('type', $data['type'])
-                        ->where('id', $data['id'])
-                        ->first();
+                    $object = $this->findInclude($data['type'], $data['id']);
                     if (!empty($object)) {
                         $relationObject = $this->buildObject($object);
                     }
                 } else {
+                    $relationObject = new Collection();
                     foreach ($data as $multiData) {
-                        $object = $this->includedObjects
-                            ->where('type', $multiData['type'])
-                            ->where('id', $multiData['id'])
-                            ->first();
+                        $object = $this->findInclude($multiData['type'], $multiData['id']);
                         if (!empty($object)) {
-                            $relationObject[] = $this->buildObject($object);
+                            $relationObject->put($object->id, $this->buildObject($object));
                         }
                     }
                 }
@@ -162,5 +182,20 @@ class Normalizer {
         }
 
         return $relations;
+    }
+
+    private function findInclude($type, $id)
+    {
+        return $this->includedObjects
+            ->where('type', $type)
+            ->where('id', $id)
+            ->first();
+    }
+
+    private function isValidJson($string)
+    {
+        json_decode($string);
+
+        return json_last_error() == JSON_ERROR_NONE;
     }
 }
