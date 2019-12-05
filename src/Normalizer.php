@@ -69,6 +69,7 @@ class Normalizer {
 
         $this->storeOriginal($inputData);
         $this->storeData($this->original->get('data'));
+
         $this->storeIncluded($this->original->get('included'));
     }
 
@@ -93,7 +94,7 @@ class Normalizer {
             $result = $this->buildObject($object);
         } else {
             $this->data->each(function ($object) use ($result) {
-                $result->put($object->id, $this->buildObject($object));
+                $result->put($object['id'], $this->buildObject($object));
             });
         }
 
@@ -184,7 +185,7 @@ class Normalizer {
     {
         $relations = [];
 
-        if ($object->relationships) {
+        if (isset($object->relationships)) {
             foreach ($object->relationships as $key => $relation) {
                 $relationObject = $this->buildRelationship($relation);
 
@@ -220,7 +221,7 @@ class Normalizer {
             foreach ($relationData as $multiData) {
                 $object = $this->findInclude($multiData['type'], $multiData['id']);
                 if (!empty($object)) {
-                    $relationObject->put($object->id, $this->buildObject($object));
+                    $relationObject->put($object['id'], $this->buildObject($object));
                 }
             }
         }
