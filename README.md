@@ -2,8 +2,16 @@
 Utility to normalize and build JSON:API response data.
 
 ## Install
+Add the following to your composer.json file (currently need this because it's not on an official site):
+```"repositories": [
+        {
+            "type": "vcs",
+            "url": "git@github.com:tallcoder/json-api-normalizer.git"
+        }
+    ],```
+
 ```bash
-$ composer require jacobfennik/json-api-normalizer
+$ composer require tallcoder/json-api-normalizer
 ```
 
 ## Example
