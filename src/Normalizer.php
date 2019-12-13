@@ -21,7 +21,7 @@ class Normalizer {
     /**
      * @var Collection
      */
-    protected $data;
+    public $data;
 
     /**
      * @var Collection
@@ -95,9 +95,15 @@ class Normalizer {
             $object = $this->data->where('id', $dataId)->first();
             $result = $this->buildObject($object);
         } else {
-            $this->data->each(function ($object) use ($result) {
-                $result->put($object['id'], $this->buildObject($object));
-            });
+            $result->put($this->data->get('id'), $this->buildObject($this->data));
+//            $this->data->each(function ($object, $key) use ($result) {
+//                if (!isset($object['id'])) {
+//                    stilcroInfo($key);
+//                    stilcroInfo($object);
+//                    stilcroInfo(print_r($this->data)); die;
+//                }
+//                $result->put($object['id'], $this->buildObject($object));
+//            });
         }
 
         return $result;
@@ -152,22 +158,25 @@ class Normalizer {
      */
     private function buildObject($object)
     {
-        if (is_array($object)) {
-            $object = (object) $object;
-        }
+        $object = json_decode(json_encode($object));
 
         $relations = $this->getRelationships($object);
 
         foreach ($relations as $key => $relation) {
-            $object->{$key} = $relation;
+            if ($key === 'attributes') {
+                $object->product_attributes = $relation;
+            } else {
+                $object->{$key} = $relation;
+            }
         }
         unset($object->relationships);
 
         $attributes = $object->attributes;
+
         foreach ($attributes as $key => $value) {
             $object->{$key} = $value;
         }
-        unset($object->attributes);
+        // unset($object->attributes);
 
         if (!$this->includeType) {
             unset($object->type);
@@ -188,8 +197,13 @@ class Normalizer {
         $relations = [];
 
         if (isset($object->relationships)) {
-            foreach ($object->relationships as $key => $relation) {
-                $relationObject = $this->buildRelationship($relation);
+            $relationships = (object)$object->relationships;
+        }
+
+        if (isset($relationships)) {
+            foreach ($relationships as $key => $relation) {
+                // stilcroInfo(json_decode(json_encode($relation), true), true, __LINE__);
+                $relationObject = $this->buildRelationship(json_decode(json_encode($relation), true));
 
                 if ($relationObject) {
                     $relations[$key] = $relationObject;
@@ -212,10 +226,20 @@ class Normalizer {
         $relationObject = null;
         $relationData = $relation['data'];
 
-        if (array_key_exists('type', $relationData)) {
-            $object = $this->findInclude($relationData['type'], $relationData['id']);
-            if (!empty($object)) {
-                $relationObject = $this->buildObject($object);
+        $typeFound = false;
+        foreach ($relationData as $relData) {
+            if (isset($relData['type'])) {
+                $typeFound = true;
+            }
+        }
+
+        if ($typeFound) {
+            $relationObject = [];
+            foreach ($relationData as $relData) {
+                $object = $this->findInclude($relData['type'], $relData['id']);
+                if (!empty($object)) {
+                    $relationObject[] = $this->buildObject($object);
+                }
             }
         } else {
             $relationObject = new Collection();
@@ -227,6 +251,8 @@ class Normalizer {
                 }
             }
         }
+
+        // stilcroInfo($relationObject, true, __LINE__);
 
         return $relationObject;
     }
@@ -241,10 +267,12 @@ class Normalizer {
      */
     private function findInclude($type, $id)
     {
-        return $this->included
+        $found = $this->included
             ->where('type', $type)
             ->where('id', $id)
             ->first();
+
+        return $found;
     }
 
     /**
