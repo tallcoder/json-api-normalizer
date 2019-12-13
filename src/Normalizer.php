@@ -70,7 +70,9 @@ class Normalizer {
         $this->storeOriginal($inputData);
         $this->storeData($this->original->get('data'));
 
-        $this->storeIncluded($this->original->get('included'));
+        if ($this->original->get('included')) {
+            $this->storeIncluded($this->original->get('included'));
+        }
     }
 
     /**
