@@ -1,12 +1,12 @@
 <?php
-namespace JacobFennik\JsonApiNormalizer\Laravel;
+namespace TallCoder\JsonApiNormalizer\Laravel;
 
 use Illuminate\Support\ServiceProvider;
 
 /**
  * Class JsonApiNormalizerProvider
  *
- * @package JacobFennik\JsonApiNormalizer\Laravel
+ * @package TallCoder\JsonApiNormalizer\Laravel
  */
 class JsonApiNormalizerProvider extends ServiceProvider
 {

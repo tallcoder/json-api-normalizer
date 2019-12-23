@@ -1,5 +1,5 @@
 <?php
-namespace JacobFennik\JsonApiNormalizer\Exceptions;
+namespace TallCoder\JsonApiNormalizer\Exceptions;
 
 
 class InvalidJsonStringException extends \Exception {}
