@@ -1,5 +1,5 @@
 <?php
-namespace JacobFennik\JsonApiNormalizer\Exceptions;
+namespace TallCoder\JsonApiNormalizer\Exceptions;
 
 
 class NoInputDataException extends \Exception {}

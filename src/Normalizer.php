@@ -1,10 +1,10 @@
 <?php
 
-namespace JacobFennik\JsonApiNormalizer;
+namespace TallCoder\JsonApiNormalizer;
 
 use Illuminate\Support\Collection;
-use JacobFennik\JsonApiNormalizer\Exceptions\InvalidJsonStringException;
-use JacobFennik\JsonApiNormalizer\Exceptions\NoInputDataException;
+use TallCoder\JsonApiNormalizer\Exceptions\InvalidJsonStringException;
+use TallCoder\JsonApiNormalizer\Exceptions\NoInputDataException;
 
 /**
  * Class Normalizer
